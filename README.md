@@ -20,6 +20,8 @@ It includes real business rules beyond basic CRUD:
 - Appointment duration is calculated in minutes.
 - Appointment status is classified as `SCHEDULED`, `TODAY`, `PAST`, or `CANCELED`.
 - The report endpoint consumes internal HTTP endpoints using Java `HttpClient`, demonstrating service integration.
+- When a contact is saved with a `zipCode`, the API consumes the external **ViaCEP** API and stores the resolved address (street, neighborhood, city, state) together with the contact. If the zip code does not exist, the contact is not saved and an error is returned.
+- Creating an appointment publishes a notification message to **RabbitMQ**, processed asynchronously by a separate consumer system.
 
 ## Requirements
 
@@ -47,6 +49,8 @@ Services:
 - OpenAPI JSON: `http://localhost:8000/openapi.json`
 - phpMyAdmin: `http://localhost:8081`
 - MySQL: `localhost:3306`
+- RabbitMQ management UI: `http://localhost:15672` (user `guest`, password `guest`)
+- Notification consumer: separate container `agenda_consumer` (watch its logs)
 
 Database credentials:
 
@@ -106,13 +110,32 @@ Creates a contact.
 {
   "name": "Maria Silva",
   "email": "maria@example.com",
-  "phone": "(11) 99999-0000"
+  "phone": "(11) 99999-0000",
+  "zipCode": "01001-000"
 }
 ```
 
+Only `name`, `email`, `phone`, and the optional `zipCode` are accepted in the body. The address fields (`street`, `neighborhood`, `city`, `state`) are **never** read from the body — they are resolved from the ViaCEP API. When a `zipCode` is sent, the API returns the contact already enriched with the address:
+
+```json
+{
+  "id": 1,
+  "name": "Maria Silva",
+  "email": "maria@example.com",
+  "phone": "(11) 99999-0000",
+  "zipCode": "01001000",
+  "street": "Praça da Sé",
+  "neighborhood": "Sé",
+  "city": "São Paulo",
+  "state": "SP"
+}
+```
+
+If the zip code does not exist in ViaCEP, the contact is not created and the API returns `404`. An invalid zip code format returns `400`.
+
 `PUT /contacts/{id}`
 
-Updates a contact.
+Updates a contact. The address is re-resolved from the `zipCode` sent in the body.
 
 `DELETE /contacts/{id}`
 
@@ -169,15 +192,54 @@ Example response:
 }
 ```
 
+## External API Integration (ViaCEP)
+
+`services/CepService.java` consumes the public ViaCEP API
+(`https://viacep.com.br/ws/{zipCode}/json/`) with Java `HttpClient`, following the
+pattern from `iss-aula09.pdf`. The JSON response is deserialized into
+`models/Address.java` with Jackson (the Portuguese ViaCEP keys are mapped to
+English field names with `@JsonAlias`).
+
+The integration happens when a contact is created or updated with a `zipCode`
+(`ContactService.fillAddressFromZipCode`): the API validates the format (8 digits),
+calls ViaCEP, and copies the resolved address onto the contact before persisting.
+Because the external call happens before the database write, a non-existent zip
+code (ViaCEP returns `404`) means nothing is saved. The resolved address is then
+stored in the `contacts` table and returned in every contact response.
+
+## Messaging (RabbitMQ)
+
+The system uses RabbitMQ for asynchronous
+communication between two systems:
+
+- **Producer (inside the API):** when an appointment is created,
+  `AppointmentService` builds a `NotificationMessage` and `NotificationPublisher`
+  publishes it as JSON to the queue `agenda.notifications`.
+- **Consumer (separate system):** `messaging/NotificationConsumer` runs as its
+  own process/container (`agenda_consumer`), consumes the queue, and logs the
+  notification that would be sent. This demonstrates asynchronous communication
+  between systems: the API responds immediately while the notification is
+  processed independently.
+
+The queue and messages can be inspected in the management UI at
+`http://localhost:15672` (`guest`/`guest`).
+
+To watch the consumer processing messages:
+
+```bash
+docker compose logs -f consumer
+```
+
 ## Code Organization
 
 - `App.java`: starts the HTTP server and registers routes.
 - `controllers`: route handlers using `HttpServer`.
-- `services`: business rules and validation.
+- `services`: business rules, validation, and external API consumption (`CepService`).
 - `repositories`: JDBC database access.
+- `messaging`: RabbitMQ producer (`NotificationPublisher`) and consumer (`NotificationConsumer`).
 - `models`: domain classes and response models.
 - `exceptions`: custom application exceptions.
-- `config`: database and JSON configuration.
+- `config`: database, JSON, and RabbitMQ configuration.
 - `tests/ApiSmokeTest.java`: small Java HTTP test client using `HttpURLConnection`.
 
 This structure separates HTTP, business rules, data access, and models, as required by the assignment.
@@ -221,3 +283,6 @@ curl http://localhost:8000/reports/agenda-summary
 - API testing option with Java HTTP client: yes.
 - Docker database and phpMyAdmin: yes.
 - Swagger/OpenAPI documentation: yes.
+- External API integration (ViaCEP): yes.
+- RabbitMQ messaging (producer + consumer): yes.
+- Asynchronous communication between systems: yes.

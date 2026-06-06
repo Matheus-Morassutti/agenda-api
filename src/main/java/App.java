@@ -3,9 +3,11 @@ import controllers.AppointmentHandler;
 import controllers.ContactHandler;
 import controllers.DocsHandler;
 import controllers.ReportHandler;
+import messaging.NotificationPublisher;
 import repositories.AppointmentRepository;
 import repositories.ContactRepository;
 import services.AppointmentService;
+import services.CepService;
 import services.ContactService;
 import services.ReportService;
 
@@ -18,8 +20,11 @@ public class App {
 
         ContactRepository contactRepository = new ContactRepository();
         AppointmentRepository appointmentRepository = new AppointmentRepository();
-        ContactService contactService = new ContactService(contactRepository);
-        AppointmentService appointmentService = new AppointmentService(appointmentRepository, contactRepository);
+        CepService cepService = new CepService();
+        NotificationPublisher notificationPublisher = new NotificationPublisher();
+        ContactService contactService = new ContactService(contactRepository, cepService);
+        AppointmentService appointmentService =
+                new AppointmentService(appointmentRepository, contactRepository, notificationPublisher);
         ReportService reportService = new ReportService(port);
 
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);

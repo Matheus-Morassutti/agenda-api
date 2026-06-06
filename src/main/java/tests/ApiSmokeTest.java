@@ -14,10 +14,22 @@ public class ApiSmokeTest {
                 {
                   "name": "Maria Silva",
                   "email": "maria@example.com",
-                  "phone": "(11) 99999-0000"
+                  "phone": "(11) 99999-0000",
+                  "zipCode": "01001-000"
                 }
                 """);
+        // External API integration (ViaCEP): the contact above is returned already
+        // enriched with the address resolved from its zip code.
         get("/contacts");
+        post("/appointments", """
+                {
+                  "contactId": 1,
+                  "title": "Project meeting",
+                  "description": "Discuss ISS A2 implementation",
+                  "startsAt": "2026-12-20T14:00:00",
+                  "endsAt": "2026-12-20T15:00:00"
+                }
+                """);
         get("/reports/agenda-summary");
     }
 

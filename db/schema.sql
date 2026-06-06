@@ -7,6 +7,11 @@ CREATE TABLE IF NOT EXISTS contacts (
     name VARCHAR(120) NOT NULL,
     email VARCHAR(160) NOT NULL UNIQUE,
     phone VARCHAR(40) NOT NULL,
+    zip_code VARCHAR(9),
+    street VARCHAR(160),
+    neighborhood VARCHAR(120),
+    city VARCHAR(120),
+    state VARCHAR(2),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -59,7 +59,8 @@
               "example": {
                 "name": "Maria Silva",
                 "email": "maria@example.com",
-                "phone": "(11) 99999-0000"
+                "phone": "(11) 99999-0000",
+                "zipCode": "79005310"
               }
             }
           }
@@ -393,6 +394,32 @@
           "phone": {
             "type": "string",
             "example": "(11) 99999-0000"
+          },
+          "zipCode": {
+            "type": "string",
+            "description": "Brazilian postal code (8 digits), used by the ViaCEP integration.",
+            "example": "01001000"
+          },
+          "street": {
+            "type": "string",
+            "description": "Resolved from the ViaCEP API. Read-only, never accepted in the request body.",
+            "readOnly": true,
+            "example": "Praca da Se"
+          },
+          "neighborhood": {
+            "type": "string",
+            "readOnly": true,
+            "example": "Se"
+          },
+          "city": {
+            "type": "string",
+            "readOnly": true,
+            "example": "Sao Paulo"
+          },
+          "state": {
+            "type": "string",
+            "readOnly": true,
+            "example": "SP"
           }
         }
       },
@@ -412,6 +439,11 @@
           "phone": {
             "type": "string",
             "example": "(11) 99999-0000"
+          },
+          "zipCode": {
+            "type": "string",
+            "description": "Optional Brazilian postal code (8 digits).",
+            "example": "79005310"
           }
         }
       },

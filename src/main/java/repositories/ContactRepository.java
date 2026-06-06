@@ -14,7 +14,8 @@ import java.util.Optional;
 
 public class ContactRepository {
     public List<Contact> findAll() {
-        String sql = "SELECT id, name, email, phone FROM contacts ORDER BY name";
+        String sql = "SELECT id, name, email, phone, zip_code, street, neighborhood, city, state "
+                + "FROM contacts ORDER BY name";
 
         try (Connection connection = DatabaseConfig.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql);
@@ -30,7 +31,8 @@ public class ContactRepository {
     }
 
     public Optional<Contact> findById(long id) {
-        String sql = "SELECT id, name, email, phone FROM contacts WHERE id = ?";
+        String sql = "SELECT id, name, email, phone, zip_code, street, neighborhood, city, state "
+                + "FROM contacts WHERE id = ?";
 
         try (Connection connection = DatabaseConfig.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -80,13 +82,12 @@ public class ContactRepository {
     }
 
     public Contact create(Contact contact) {
-        String sql = "INSERT INTO contacts (name, email, phone) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO contacts (name, email, phone, zip_code, street, neighborhood, city, state) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection connection = DatabaseConfig.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            statement.setString(1, contact.getName());
-            statement.setString(2, contact.getEmail());
-            statement.setString(3, contact.getPhone());
+            fillStatement(statement, contact);
             statement.executeUpdate();
 
             try (ResultSet keys = statement.getGeneratedKeys()) {
@@ -101,20 +102,30 @@ public class ContactRepository {
     }
 
     public Contact update(long id, Contact contact) {
-        String sql = "UPDATE contacts SET name = ?, email = ?, phone = ? WHERE id = ?";
+        String sql = "UPDATE contacts SET name = ?, email = ?, phone = ?, zip_code = ?, "
+                + "street = ?, neighborhood = ?, city = ?, state = ? WHERE id = ?";
 
         try (Connection connection = DatabaseConfig.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setString(1, contact.getName());
-            statement.setString(2, contact.getEmail());
-            statement.setString(3, contact.getPhone());
-            statement.setLong(4, id);
+            fillStatement(statement, contact);
+            statement.setLong(9, id);
             statement.executeUpdate();
             contact.setId(id);
             return contact;
         } catch (SQLException exception) {
             throw new IllegalStateException("Could not update contact.", exception);
         }
+    }
+
+    private void fillStatement(PreparedStatement statement, Contact contact) throws SQLException {
+        statement.setString(1, contact.getName());
+        statement.setString(2, contact.getEmail());
+        statement.setString(3, contact.getPhone());
+        statement.setString(4, contact.getZipCode());
+        statement.setString(5, contact.getStreet());
+        statement.setString(6, contact.getNeighborhood());
+        statement.setString(7, contact.getCity());
+        statement.setString(8, contact.getState());
     }
 
     public void delete(long id) {
@@ -135,6 +146,11 @@ public class ContactRepository {
         contact.setName(resultSet.getString("name"));
         contact.setEmail(resultSet.getString("email"));
         contact.setPhone(resultSet.getString("phone"));
+        contact.setZipCode(resultSet.getString("zip_code"));
+        contact.setStreet(resultSet.getString("street"));
+        contact.setNeighborhood(resultSet.getString("neighborhood"));
+        contact.setCity(resultSet.getString("city"));
+        contact.setState(resultSet.getString("state"));
         return contact;
     }
 }

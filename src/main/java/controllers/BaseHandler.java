@@ -1,7 +1,6 @@
 package controllers;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import config.JsonConfig;
@@ -27,7 +26,7 @@ public abstract class BaseHandler implements HttpHandler {
 
         try {
             handleRequest(exchange);
-        } catch (JsonMappingException exception) {
+        } catch (JsonProcessingException exception) {
             sendJson(exchange, 400, new ApiError(400, "Invalid JSON body."));
         } catch (AppException exception) {
             sendJson(exchange, exception.getStatusCode(), new ApiError(exception.getStatusCode(), exception.getMessage()));

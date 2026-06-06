@@ -44,3 +44,5 @@ build/
 /src/test
 .env
 .env.local
+
+dependency-reduced-pom.xml

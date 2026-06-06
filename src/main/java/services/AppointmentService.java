@@ -2,8 +2,11 @@ package services;
 
 import exceptions.NotFoundException;
 import exceptions.ValidationException;
+import messaging.NotificationPublisher;
 import models.Appointment;
 import models.AppointmentStatus;
+import models.Contact;
+import models.NotificationMessage;
 import repositories.AppointmentRepository;
 import repositories.ContactRepository;
 
@@ -14,10 +17,14 @@ import java.util.List;
 public class AppointmentService {
     private final AppointmentRepository appointmentRepository;
     private final ContactRepository contactRepository;
+    private final NotificationPublisher notificationPublisher;
 
-    public AppointmentService(AppointmentRepository appointmentRepository, ContactRepository contactRepository) {
+    public AppointmentService(AppointmentRepository appointmentRepository,
+                              ContactRepository contactRepository,
+                              NotificationPublisher notificationPublisher) {
         this.appointmentRepository = appointmentRepository;
         this.contactRepository = contactRepository;
+        this.notificationPublisher = notificationPublisher;
     }
 
     public List<Appointment> findAll() {
@@ -35,7 +42,9 @@ public class AppointmentService {
     public Appointment create(Appointment appointment) {
         validate(appointment, null);
         appointment.setStatus(normalizeStatus(appointment.getStatus()));
-        return withCalculatedStatus(appointmentRepository.create(appointment));
+        Appointment created = withCalculatedStatus(appointmentRepository.create(appointment));
+        publishNotification(created);
+        return created;
     }
 
     public Appointment update(long id, Appointment appointment) {
@@ -81,6 +90,20 @@ public class AppointmentService {
                 currentId)) {
             throw new ValidationException("This contact already has an appointment in the informed period.");
         }
+    }
+
+    private void publishNotification(Appointment appointment) {
+        String contactName = contactRepository.findById(appointment.getContactId())
+                .map(Contact::getName)
+                .orElse("contact " + appointment.getContactId());
+        String message = "Reminder: \"" + appointment.getTitle() + "\" with " + contactName
+                + " starts at " + appointment.getStartsAt() + ".";
+        notificationPublisher.publish(new NotificationMessage(
+                appointment.getId(),
+                contactName,
+                appointment.getTitle(),
+                appointment.getStartsAt(),
+                message));
     }
 
     private AppointmentStatus normalizeStatus(AppointmentStatus status) {
