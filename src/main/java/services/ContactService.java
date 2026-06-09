@@ -56,11 +56,19 @@ public class ContactService {
             return;
         }
 
-        Address address = cepService.lookup(contact.getZipCode());
-        contact.setStreet(address.getStreet());
-        contact.setNeighborhood(address.getNeighborhood());
-        contact.setCity(address.getCity());
-        contact.setState(address.getState());
+        try{
+            Address address = cepService.lookup(contact.getZipCode());
+
+            contact.setStreet(address.getStreet());
+            contact.setNeighborhood(address.getNeighborhood());
+            contact.setCity(address.getCity());
+            contact.setState(address.getState());
+        } catch (Exception e){
+            contact.setStreet(null);
+            contact.setNeighborhood(null);
+            contact.setCity(null);
+            contact.setState(null);
+        }
     }
 
     public void delete(long id) {
