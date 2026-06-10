@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agenda API</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f5f3;
+    --surface: #ffffff;
+    --surface2: #f0efe9;
+    --border: #e2e0d8;
+    --border2: #ccc9be;
+    --text: #1a1a18;
+    --text2: #6b6a64;
+    --text3: #9a9890;
+    --blue: #185FA5;
+    --blue-bg: #E6F1FB;
+    --blue-light: #B5D4F4;
+    --green: #3B6D11;
+    --green-bg: #EAF3DE;
+    --amber: #854F0B;
+    --amber-bg: #FAEEDA;
+    --red: #A32D2D;
+    --red-bg: #FCEBEB;
+    --gray: #5F5E5A;
+    --gray-bg: #F1EFE8;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 220px;
+    min-width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: 100;
+  }
+  .sidebar-logo {
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar-logo h1 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.2px;
+  }
+  .sidebar-logo span {
+    font-size: 11px;
+    color: var(--text3);
+    display: block;
+    margin-top: 2px;
+    font-weight: 400;
+  }
+  .sidebar-nav {
+    flex: 1;
+    padding: 12px 10px;
+    overflow-y: auto;
+  }
+  .nav-section {
+    margin-bottom: 20px;
+  }
+  .nav-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 0 10px;
+    margin-bottom: 4px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    color: var(--text2);
+    font-size: 13.5px;
+    font-weight: 450;
+    transition: background 0.12s, color 0.12s;
+    user-select: none;
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: var(--blue-bg); color: var(--blue); font-weight: 500; }
+  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+  .api-config {
+    padding: 12px;
+    border-top: 1px solid var(--border);
+  }
+  .api-config label {
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 5px;
+  }
+  .api-config input {
+    width: 100%;
+    padding: 6px 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 11px;
+    color: var(--text);
+    outline: none;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+  .api-config input:focus { border-color: var(--blue); }
+  .api-status {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 5px;
+    font-size: 11px;
+    color: var(--text3);
+  }
+  .api-status .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--border2);
+    flex-shrink: 0;
+  }
+  .api-status.ok .dot { background: #639922; }
+  .api-status.err .dot { background: var(--red); }
+
+  /* MAIN */
+  .main {
+    margin-left: 220px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 28px;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .topbar-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .topbar-actions { display: flex; gap: 8px; align-items: center; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    transition: all 0.12s;
+    line-height: 1;
+  }
+  .btn:hover { background: var(--surface2); border-color: var(--border2); }
+  .btn-primary {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: #fff;
+  }
+  .btn-primary:hover { background: #0C447C; border-color: #0C447C; }
+  .btn svg { width: 14px; height: 14px; }
+  .btn-danger { color: var(--red); border-color: var(--red-bg); background: var(--red-bg); }
+  .btn-danger:hover { background: #F7C1C1; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+  .page { padding: 28px; display: none; }
+  .page.active { display: block; }
+
+  /* DASHBOARD */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+  }
+  .stat-card .label {
+    font-size: 11px;
+    color: var(--text3);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+  .stat-card .value {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1;
+  }
+  .stat-card .sub {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 4px;
+  }
+  .stat-card.blue { border-left: 3px solid var(--blue); }
+  .stat-card.green { border-left: 3px solid #639922; }
+  .stat-card.amber { border-left: 3px solid #EF9F27; }
+  .stat-card.red { border-left: 3px solid var(--red); }
+  .stat-card.gray { border-left: 3px solid var(--border2); }
+
+  /* TABLE */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .section-header h2 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  th {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 10px 16px;
+    text-align: left;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    font-size: 13.5px;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg); }
+  .td-actions { display: flex; gap: 6px; }
+  .td-muted { color: var(--text2); }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .badge-blue { background: var(--blue-bg); color: var(--blue); }
+  .badge-green { background: var(--green-bg); color: var(--green); }
+  .badge-amber { background: var(--amber-bg); color: var(--amber); }
+  .badge-red { background: var(--red-bg); color: var(--red); }
+  .badge-gray { background: var(--gray-bg); color: var(--gray); }
+
+  /* EMPTY / LOADING */
+  .empty {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--text3);
+  }
+  .empty svg { width: 36px; height: 36px; margin: 0 auto 10px; display: block; opacity: 0.4; }
+  .empty p { font-size: 13px; }
+  .spinner {
+    border: 2px solid var(--border);
+    border-top-color: var(--blue);
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-row td { text-align: center; padding: 32px; }
+
+  /* MODAL */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal-header {
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .modal-header h3 { font-size: 15px; font-weight: 600; }
+  .modal-close {
+    width: 28px; height: 28px;
+    border-radius: var(--radius);
+    border: none;
+    background: none;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text3);
+    font-size: 18px;
+    transition: background 0.1s;
+  }
+  .modal-close:hover { background: var(--surface2); color: var(--text); }
+  .modal-body { padding: 18px 20px; }
+  .modal-footer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  /* FORM */
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .form-group { margin-bottom: 14px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text2);
+    margin-bottom: 5px;
+  }
+  input[type="text"], input[type="email"], input[type="tel"],
+  input[type="datetime-local"], select, textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 13.5px;
+    color: var(--text);
+    background: var(--surface);
+    outline: none;
+    transition: border-color 0.12s;
+    font-family: inherit;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--blue); }
+  textarea { resize: vertical; min-height: 72px; }
+
+  /* TOAST */
+  #toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 500;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .toast {
+    background: var(--text);
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    max-width: 320px;
+    animation: slideIn 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .toast.success { background: #3B6D11; }
+  .toast.error { background: var(--red); }
+  @keyframes slideIn { from { transform: translateY(8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  /* CONFIRM DIALOG */
+  .confirm-modal { max-width: 380px; }
+  .confirm-modal .modal-body { font-size: 13.5px; color: var(--text2); line-height: 1.6; }
+
+  /* APPT CARD STATUS LEFT BORDER */
+  .appt-row.status-SCHEDULED td:first-child { border-left: 3px solid var(--blue); }
+  .appt-row.status-TODAY td:first-child { border-left: 3px solid #EF9F27; }
+  .appt-row.status-PAST td:first-child { border-left: 3px solid var(--border2); }
+  .appt-row.status-CANCELED td:first-child { border-left: 3px solid #E24B4A; }
+
+  /* SEARCH */
+  .search-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
+  .search-wrap svg {
+    position: absolute;
+    left: 8px;
+    width: 14px; height: 14px;
+    color: var(--text3);
+    pointer-events: none;
+  }
+  .search-wrap input {
+    padding: 7px 10px 7px 28px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 13px;
+    background: var(--surface);
+    outline: none;
+    width: 200px;
+    color: var(--text);
+  }
+  .search-wrap input:focus { border-color: var(--blue); }
+
+  @media (max-width: 760px) {
+    .sidebar { width: 180px; min-width: 180px; }
+    .main { margin-left: 180px; }
+    .form-row { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <h1>Agenda</h1>
+    <span>Gestão de contatos e compromissos</span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">
+      <div class="nav-label">Menu</div>
+      <div class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-item" data-page="contacts" onclick="navigate('contacts')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.314 2.686-6 6-6s6 2.686 6 6"/></svg>
+        Contatos
+      </div>
+      <div class="nav-item" data-page="appointments" onclick="navigate('appointments')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="14" height="13" rx="2"/><path d="M5 1v2M11 1v2M1 6h14"/></svg>
+        Agendamentos
+      </div>
+    </div>
+  </nav>
+  <div class="api-config">
+    <label>URL da API</label>
+    <input type="text" id="api-url" value="" placeholder="http://localhost:8000" oninput="updateApiUrl()" onblur="applyApiUrl()" onkeydown="if(event.key==='Enter')applyApiUrl()" />
+    <div class="api-status" id="api-status">
+      <span class="dot"></span>
+      <span id="api-status-text">Não verificado</span>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="page-title">Dashboard</div>
+    <div class="topbar-actions" id="topbar-actions"></div>
+  </div>
+
+  <!-- DASHBOARD PAGE -->
+  <div class="page active" id="page-dashboard">
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card blue"><div class="label">Contatos</div><div class="value" id="s-contacts">—</div><div class="sub">Total</div></div>
+      <div class="stat-card blue"><div class="label">Agendamentos</div><div class="value" id="s-total">—</div><div class="sub">Total</div></div>
+      <div class="stat-card green"><div class="label">Agendados</div><div class="value" id="s-scheduled">—</div><div class="sub">Futuros</div></div>
+      <div class="stat-card amber"><div class="label">Hoje</div><div class="value" id="s-today">—</div><div class="sub">Este dia</div></div>
+      <div class="stat-card gray"><div class="label">Passados</div><div class="value" id="s-past">—</div><div class="sub">Concluídos</div></div>
+      <div class="stat-card red"><div class="label">Cancelados</div><div class="value" id="s-canceled">—</div><div class="sub">Cancelados</div></div>
+    </div>
+    <div class="section-header">
+      <h2>Próximos agendamentos</h2>
+      <button class="btn btn-sm" onclick="loadDashboard()">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 8A6 6 0 1 1 8 2"/><path d="M11 2h3v3"/></svg>
+        Atualizar
+      </button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Título</th><th>Contato</th><th>Início</th><th>Duração</th><th>Status</th></tr>
+        </thead>
+        <tbody id="dashboard-appointments"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CONTACTS PAGE -->
+  <div class="page" id="page-contacts">
+    <div class="section-header">
+      <div class="search-wrap">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3.5 3.5"/></svg>
+        <input type="text" id="contact-search" placeholder="Buscar contatos..." oninput="filterContacts()">
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Nome</th><th>Email</th><th>Telefone</th><th>Cidade</th><th>CEP</th><th></th></tr>
+        </thead>
+        <tbody id="contacts-table"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- APPOINTMENTS PAGE -->
+  <div class="page" id="page-appointments">
+    <div class="section-header">
+      <div class="search-wrap">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3.5 3.5"/></svg>
+        <input type="text" id="appt-search" placeholder="Buscar agendamentos..." oninput="filterAppointments()">
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Título</th><th>Contato (ID)</th><th>Início</th><th>Fim</th><th>Duração</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody id="appointments-table"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- CONTACT MODAL -->
+<div class="modal-backdrop" id="contact-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="contact-modal-title">Novo contato</h3>
+      <button class="modal-close" onclick="closeModal('contact-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="contact-id">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nome *</label>
+          <input type="text" id="c-name" placeholder="Maria Silva">
+        </div>
+        <div class="form-group">
+          <label>Telefone *</label>
+          <input type="tel" id="c-phone" placeholder="(11) 99999-0000">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Email *</label>
+        <input type="email" id="c-email" placeholder="maria@exemplo.com">
+      </div>
+      <div class="form-group">
+        <label>CEP <span style="color:var(--text3); font-weight:400;">(opcional — endereço preenchido automaticamente)</span></label>
+        <input type="text" id="c-zip" placeholder="01001-000" maxlength="9">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('contact-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveContact()">Salvar contato</button>
+    </div>
+  </div>
+</div>
+
+<!-- APPOINTMENT MODAL -->
+<div class="modal-backdrop" id="appt-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="appt-modal-title">Novo agendamento</h3>
+      <button class="modal-close" onclick="closeModal('appt-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="appt-id">
+      <div class="form-group">
+        <label>Contato *</label>
+        <select id="appt-contact"></select>
+      </div>
+      <div class="form-group">
+        <label>Título *</label>
+        <input type="text" id="appt-title" placeholder="Reunião de projeto">
+      </div>
+      <div class="form-group">
+        <label>Descrição</label>
+        <textarea id="appt-desc" placeholder="Detalhes do agendamento..."></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Início *</label>
+          <input type="datetime-local" id="appt-start">
+        </div>
+        <div class="form-group">
+          <label>Fim *</label>
+          <input type="datetime-local" id="appt-end">
+        </div>
+      </div>
+      <div class="form-group" id="appt-status-group" style="display:none;">
+        <label>Status</label>
+        <select id="appt-status">
+          <option value="SCHEDULED">Agendado</option>
+          <option value="CANCELED">Cancelado</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('appt-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveAppointment()">Salvar agendamento</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="modal-backdrop" id="confirm-modal">
+  <div class="modal confirm-modal">
+    <div class="modal-header">
+      <h3 id="confirm-title">Confirmar exclusão</h3>
+      <button class="modal-close" onclick="closeModal('confirm-modal')">✕</button>
+    </div>
+    <div class="modal-body" id="confirm-body">Tem certeza?</div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('confirm-modal')">Cancelar</button>
+      <button class="btn btn-danger" id="confirm-ok-btn" onclick="confirmOk()">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
+
+<script>
+let API = localStorage.getItem('agenda-api-url') || '';
+let allContacts = [];
+let allAppointments = [];
+let confirmCallback = null;
+let currentPage = 'dashboard';
+
+function updateApiUrl() {
+  API = document.getElementById('api-url').value.trim().replace(/\/$/, '');
+  localStorage.setItem('agenda-api-url', API);
+}
+
+function applyApiUrl() {
+  const val = document.getElementById('api-url').value.trim().replace(/\/$/, '');
+  API = val || window.location.origin;
+  document.getElementById('api-url').value = API;
+  localStorage.setItem('agenda-api-url', API);
+  checkApiHealth();
+  navigate(currentPage);
+}
+
+async function checkApiHealth() {
+  const statusEl = document.getElementById('api-status');
+  const textEl = document.getElementById('api-status-text');
+  try {
+    const res = await fetch(API + '/contacts', { signal: AbortSignal.timeout(4000) });
+    if (res.ok || res.status === 200) {
+      statusEl.className = 'api-status ok';
+      textEl.textContent = 'Conectado';
+    } else {
+      throw new Error(res.status);
+    }
+  } catch {
+    statusEl.className = 'api-status err';
+    textEl.textContent = 'Sem conexão';
+  }
+}
+
+async function apiFetch(path, opts = {}) {
+  const res = await fetch(API + path, {
+    headers: { 'Content-Type': 'application/json', ...opts.headers },
+    ...opts
+  });
+  const text = await res.text();
+  let data;
+  try { data = text ? JSON.parse(text) : null; } catch { data = null; }
+  if (!res.ok) {
+    throw new Error(data?.error || `HTTP ${res.status}`);
+  }
+  return data;
+}
+
+function navigate(page) {
+  currentPage = page;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.querySelector(`[data-page="${page}"]`).classList.add('active');
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  const titles = { dashboard: 'Dashboard', contacts: 'Contatos', appointments: 'Agendamentos' };
+  document.getElementById('page-title').textContent = titles[page];
+
+  const acts = document.getElementById('topbar-actions');
+  acts.innerHTML = '';
+
+  if (page === 'contacts') {
+    acts.innerHTML = `<button class="btn btn-primary" onclick="openNewContact()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v10M3 8h10"/></svg>
+      Novo contato
+    </button>`;
+    loadContacts();
+  } else if (page === 'appointments') {
+    acts.innerHTML = `<button class="btn btn-primary" onclick="openNewAppt()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v10M3 8h10"/></svg>
+      Novo agendamento
+    </button>`;
+    loadAppointments();
+  } else {
+    loadDashboard();
+  }
+}
+
+/* ─── TOAST ─────────────────────────────────────────────────────────── */
+function toast(msg, type = '') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+/* ─── MODAL ──────────────────────────────────────────────────────────── */
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+/* ─── CONFIRM ────────────────────────────────────────────────────────── */
+function confirm(title, body, cb) {
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-body').textContent = body;
+  confirmCallback = cb;
+  openModal('confirm-modal');
+}
+function confirmOk() {
+  closeModal('confirm-modal');
+  if (confirmCallback) confirmCallback();
+  confirmCallback = null;
+}
+
+/* ─── UTILS ──────────────────────────────────────────────────────────── */
+function statusBadge(s) {
+  const map = {
+    SCHEDULED: ['badge-blue', 'Agendado'],
+    TODAY: ['badge-amber', 'Hoje'],
+    PAST: ['badge-gray', 'Passado'],
+    CANCELED: ['badge-red', 'Cancelado'],
+  };
+  const [cls, label] = map[s] || ['badge-gray', s];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function fmtDateTime(dt) {
+  if (!dt) return '—';
+  const d = new Date(dt);
+  return d.toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+function fmtDate(dt) {
+  if (!dt) return '—';
+  const d = new Date(dt);
+  return d.toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+
+function toLocalInput(dt) {
+  if (!dt) return '';
+  const d = new Date(dt);
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/* ─── DASHBOARD ──────────────────────────────────────────────────────── */
+async function loadDashboard() {
+  document.getElementById('dashboard-appointments').innerHTML =
+    '<tr class="loading-row"><td colspan="5"><span class="spinner"></span></td></tr>';
+  try {
+    const summary = await apiFetch('/reports/agenda-summary');
+    document.getElementById('s-contacts').textContent = summary.totalContacts;
+    document.getElementById('s-total').textContent = summary.totalAppointments;
+    document.getElementById('s-scheduled').textContent = summary.scheduledAppointments;
+    document.getElementById('s-today').textContent = summary.todayAppointments;
+    document.getElementById('s-past').textContent = summary.pastAppointments;
+    document.getElementById('s-canceled').textContent = summary.canceledAppointments;
+
+    const appts = await apiFetch('/appointments');
+    const upcoming = appts
+      .filter(a => a.status === 'SCHEDULED' || a.status === 'TODAY')
+      .slice(0, 8);
+
+    const contactsMap = {};
+    try {
+      const contacts = await apiFetch('/contacts');
+      contacts.forEach(c => contactsMap[c.id] = c.name);
+    } catch {}
+
+    const tb = document.getElementById('dashboard-appointments');
+    if (!upcoming.length) {
+      tb.innerHTML = '<tr><td colspan="5"><div class="empty"><p>Nenhum agendamento futuro encontrado.</p></div></td></tr>';
+      return;
+    }
+    tb.innerHTML = upcoming.map(a => `
+      <tr>
+        <td><strong>${esc(a.title)}</strong></td>
+        <td class="td-muted">${esc(contactsMap[a.contactId] || 'ID ' + a.contactId)}</td>
+        <td class="td-muted">${fmtDateTime(a.startsAt)}</td>
+        <td class="td-muted">${a.durationMinutes ? a.durationMinutes + ' min' : '—'}</td>
+        <td>${statusBadge(a.status)}</td>
+      </tr>`).join('');
+
+    checkApiHealth();
+  } catch (e) {
+    document.getElementById('dashboard-appointments').innerHTML =
+      `<tr><td colspan="5"><div class="empty"><p>Erro ao carregar dados: ${esc(e.message)}</p></div></td></tr>`;
+  }
+}
+
+/* ─── CONTACTS ───────────────────────────────────────────────────────── */
+async function loadContacts() {
+  document.getElementById('contacts-table').innerHTML =
+    '<tr class="loading-row"><td colspan="6"><span class="spinner"></span></td></tr>';
+  try {
+    allContacts = await apiFetch('/contacts');
+    renderContacts(allContacts);
+  } catch (e) {
+    document.getElementById('contacts-table').innerHTML =
+      `<tr><td colspan="6"><div class="empty"><p>Erro: ${esc(e.message)}</p></div></td></tr>`;
+  }
+}
+
+function renderContacts(list) {
+  const tb = document.getElementById('contacts-table');
+  if (!list.length) {
+    tb.innerHTML = '<tr><td colspan="6"><div class="empty"><p>Nenhum contato encontrado. Crie o primeiro!</p></div></td></tr>';
+    return;
+  }
+  tb.innerHTML = list.map(c => `
+    <tr>
+      <td><strong>${esc(c.name)}</strong></td>
+      <td class="td-muted">${esc(c.email)}</td>
+      <td class="td-muted">${esc(c.phone)}</td>
+      <td class="td-muted">${esc(c.city || '—')}</td>
+      <td class="td-muted">${esc(c.zipCode || '—')}</td>
+      <td>
+        <div class="td-actions">
+          <button class="btn btn-sm" onclick="openEditContact(${c.id})">Editar</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteContact(${c.id}, '${esc(c.name)}')">Excluir</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function filterContacts() {
+  const q = document.getElementById('contact-search').value.toLowerCase();
+  const filtered = allContacts.filter(c =>
+    c.name.toLowerCase().includes(q) ||
+    c.email.toLowerCase().includes(q) ||
+    (c.phone || '').includes(q) ||
+    (c.city || '').toLowerCase().includes(q)
+  );
+  renderContacts(filtered);
+}
+
+function openNewContact() {
+  document.getElementById('contact-modal-title').textContent = 'Novo contato';
+  document.getElementById('contact-id').value = '';
+  document.getElementById('c-name').value = '';
+  document.getElementById('c-email').value = '';
+  document.getElementById('c-phone').value = '';
+  document.getElementById('c-zip').value = '';
+  openModal('contact-modal');
+}
+
+async function openEditContact(id) {
+  const c = allContacts.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('contact-modal-title').textContent = 'Editar contato';
+  document.getElementById('contact-id').value = id;
+  document.getElementById('c-name').value = c.name;
+  document.getElementById('c-email').value = c.email;
+  document.getElementById('c-phone').value = c.phone;
+  document.getElementById('c-zip').value = c.zipCode || '';
+  openModal('contact-modal');
+}
+
+async function saveContact() {
+  const id = document.getElementById('contact-id').value;
+  const body = {
+    name: document.getElementById('c-name').value.trim(),
+    email: document.getElementById('c-email').value.trim(),
+    phone: document.getElementById('c-phone').value.trim(),
+    zipCode: document.getElementById('c-zip').value.trim() || null,
+  };
+  try {
+    if (id) {
+      await apiFetch('/contacts/' + id, { method: 'PUT', body: JSON.stringify(body) });
+      toast('Contato atualizado!', 'success');
+    } else {
+      await apiFetch('/contacts', { method: 'POST', body: JSON.stringify(body) });
+      toast('Contato criado!', 'success');
+    }
+    closeModal('contact-modal');
+    loadContacts();
+  } catch (e) {
+    toast('Erro: ' + e.message, 'error');
+  }
+}
+
+function deleteContact(id, name) {
+  confirm('Excluir contato', `Tem certeza que deseja excluir "${name}"? Todos os agendamentos deste contato também serão removidos.`, async () => {
+    try {
+      await apiFetch('/contacts/' + id, { method: 'DELETE' });
+      toast('Contato excluído.', 'success');
+      loadContacts();
+    } catch (e) {
+      toast('Erro: ' + e.message, 'error');
+    }
+  });
+}
+
+/* ─── APPOINTMENTS ───────────────────────────────────────────────────── */
+async function loadAppointments() {
+  document.getElementById('appointments-table').innerHTML =
+    '<tr class="loading-row"><td colspan="7"><span class="spinner"></span></td></tr>';
+  try {
+    allAppointments = await apiFetch('/appointments');
+    if (!allContacts.length) allContacts = await apiFetch('/contacts');
+    renderAppointments(allAppointments);
+  } catch (e) {
+    document.getElementById('appointments-table').innerHTML =
+      `<tr><td colspan="7"><div class="empty"><p>Erro: ${esc(e.message)}</p></div></td></tr>`;
+  }
+}
+
+function renderAppointments(list) {
+  const tb = document.getElementById('appointments-table');
+  const contactsMap = {};
+  allContacts.forEach(c => contactsMap[c.id] = c.name);
+
+  if (!list.length) {
+    tb.innerHTML = '<tr><td colspan="7"><div class="empty"><p>Nenhum agendamento encontrado. Crie o primeiro!</p></div></td></tr>';
+    return;
+  }
+  tb.innerHTML = list.map(a => `
+    <tr class="appt-row status-${a.status}">
+      <td><strong>${esc(a.title)}</strong></td>
+      <td class="td-muted">${esc(contactsMap[a.contactId] || 'ID ' + a.contactId)}</td>
+      <td class="td-muted">${fmtDateTime(a.startsAt)}</td>
+      <td class="td-muted">${fmtDateTime(a.endsAt)}</td>
+      <td class="td-muted">${a.durationMinutes ? a.durationMinutes + ' min' : '—'}</td>
+      <td>${statusBadge(a.status)}</td>
+      <td>
+        <div class="td-actions">
+          <button class="btn btn-sm" onclick="openEditAppt(${a.id})">Editar</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteAppt(${a.id}, '${esc(a.title)}')">Excluir</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function filterAppointments() {
+  const q = document.getElementById('appt-search').value.toLowerCase();
+  const contactsMap = {};
+  allContacts.forEach(c => contactsMap[c.id] = c.name);
+  const filtered = allAppointments.filter(a =>
+    a.title.toLowerCase().includes(q) ||
+    (a.description || '').toLowerCase().includes(q) ||
+    (contactsMap[a.contactId] || '').toLowerCase().includes(q)
+  );
+  renderAppointments(filtered);
+}
+
+async function openNewAppt() {
+  document.getElementById('appt-modal-title').textContent = 'Novo agendamento';
+  document.getElementById('appt-id').value = '';
+  document.getElementById('appt-title').value = '';
+  document.getElementById('appt-desc').value = '';
+  document.getElementById('appt-start').value = '';
+  document.getElementById('appt-end').value = '';
+  document.getElementById('appt-status-group').style.display = 'none';
+  await populateContactSelect(null);
+  openModal('appt-modal');
+}
+
+async function openEditAppt(id) {
+  const a = allAppointments.find(x => x.id === id);
+  if (!a) return;
+  document.getElementById('appt-modal-title').textContent = 'Editar agendamento';
+  document.getElementById('appt-id').value = id;
+  document.getElementById('appt-title').value = a.title;
+  document.getElementById('appt-desc').value = a.description || '';
+  document.getElementById('appt-start').value = toLocalInput(a.startsAt);
+  document.getElementById('appt-end').value = toLocalInput(a.endsAt);
+  document.getElementById('appt-status-group').style.display = 'block';
+  document.getElementById('appt-status').value = (a.status === 'CANCELED') ? 'CANCELED' : 'SCHEDULED';
+  await populateContactSelect(a.contactId);
+  openModal('appt-modal');
+}
+
+async function populateContactSelect(selectedId) {
+  if (!allContacts.length) {
+    try { allContacts = await apiFetch('/contacts'); } catch {}
+  }
+  const sel = document.getElementById('appt-contact');
+  if (!allContacts.length) {
+    sel.innerHTML = '<option value="">— Nenhum contato cadastrado —</option>';
+    return;
+  }
+  sel.innerHTML = allContacts.map(c =>
+    `<option value="${c.id}" ${c.id === selectedId ? 'selected' : ''}>${esc(c.name)}</option>`
+  ).join('');
+}
+
+async function saveAppointment() {
+  const id = document.getElementById('appt-id').value;
+  const isEdit = !!id;
+  const statusSel = document.getElementById('appt-status').value;
+  const body = {
+    contactId: parseInt(document.getElementById('appt-contact').value),
+    title: document.getElementById('appt-title').value.trim(),
+    description: document.getElementById('appt-desc').value.trim() || null,
+    startsAt: document.getElementById('appt-start').value,
+    endsAt: document.getElementById('appt-end').value,
+  };
+  if (isEdit) body.status = statusSel;
+
+  try {
+    if (isEdit) {
+      await apiFetch('/appointments/' + id, { method: 'PUT', body: JSON.stringify(body) });
+      toast('Agendamento atualizado!', 'success');
+    } else {
+      await apiFetch('/appointments', { method: 'POST', body: JSON.stringify(body) });
+      toast('Agendamento criado!', 'success');
+    }
+    closeModal('appt-modal');
+    loadAppointments();
+  } catch (e) {
+    toast('Erro: ' + e.message, 'error');
+  }
+}
+
+function deleteAppt(id, title) {
+  confirm('Excluir agendamento', `Tem certeza que deseja excluir "${title}"?`, async () => {
+    try {
+      await apiFetch('/appointments/' + id, { method: 'DELETE' });
+      toast('Agendamento excluído.', 'success');
+      loadAppointments();
+    } catch (e) {
+      toast('Erro: ' + e.message, 'error');
+    }
+  });
+}
+
+/* ─── ESCAPE ─────────────────────────────────────────────────────────── */
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ─── INIT ───────────────────────────────────────────────────────────── */
+// Restore saved API URL, defaulting to same origin
+const savedUrl = localStorage.getItem('agenda-api-url');
+if (savedUrl && savedUrl !== '') {
+  API = savedUrl;
+} else {
+  API = window.location.origin;
+  localStorage.setItem('agenda-api-url', API);
+}
+document.getElementById('api-url').value = API;
+checkApiHealth();
+loadDashboard();
+</script>
+</body>
+</html>

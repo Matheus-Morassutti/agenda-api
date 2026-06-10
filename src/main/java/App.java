@@ -33,6 +33,7 @@ public class App {
         server.createContext("/reports/agenda-summary", new ReportHandler(reportService));
         server.createContext("/openapi.json", DocsHandler.openapi());
         server.createContext("/swagger", DocsHandler.swagger());
+        server.createContext("/", DocsHandler.frontend());
         server.setExecutor(Executors.newFixedThreadPool(10));
         server.start();
 

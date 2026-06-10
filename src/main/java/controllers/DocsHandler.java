@@ -23,6 +23,10 @@ public class DocsHandler implements HttpHandler {
         return new DocsHandler("application/json; charset=utf-8", "/openapi.json", null);
     }
 
+    public static DocsHandler frontend() {
+    return new DocsHandler("text/html; charset=utf-8", "/index.html", null);
+}
+
     public static DocsHandler swagger() {
         return new DocsHandler("text/html; charset=utf-8", null, swaggerHtml());
     }
