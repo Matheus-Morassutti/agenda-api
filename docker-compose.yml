@@ -19,35 +19,6 @@ services:
       timeout: 5s
       retries: 20
 
-  phpmyadmin:
-    image: phpmyadmin:5.2
-    container_name: agenda_phpmyadmin
-    restart: unless-stopped
-    environment:
-      PMA_HOST: mysql
-      PMA_PORT: 3306
-      PMA_USER: ${DB_USER:-agenda_user}
-      PMA_PASSWORD: ${DB_PASSWORD:-agenda_password}
-    ports:
-      - "${PHPMYADMIN_PORT:-8081}:80"
-    depends_on:
-      mysql:
-        condition: service_healthy
-
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: agenda_rabbitmq
-    hostname: rabbit
-    restart: unless-stopped
-    ports:
-      - "${RABBITMQ_PORT:-5672}:5672"
-      - "${RABBITMQ_MGMT_PORT:-15672}:15672"
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
   app:
     build: .
     container_name: agenda_api
@@ -65,20 +36,6 @@ services:
       - "${APP_PORT:-8000}:${APP_PORT:-8000}"
     depends_on:
       mysql:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-
-  consumer:
-    build: .
-    container_name: agenda_consumer
-    restart: unless-stopped
-    environment:
-      RABBIT_HOST: rabbit
-      RABBIT_PORT: 5672
-    entrypoint: ["java", "-cp", "app.jar", "messaging.NotificationConsumer"]
-    depends_on:
-      rabbitmq:
         condition: service_healthy
 
 volumes:
